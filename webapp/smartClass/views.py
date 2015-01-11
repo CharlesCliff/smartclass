@@ -2,7 +2,8 @@
 from django.shortcuts import render,render_to_response,get_object_or_404
 from django.http import HttpResponse,HttpResponseRedirect
 from django.template import RequestContext
-from models import Student,Teacher,Course,Sign,Answer,Group,stud_course_entry,MyUser,Test,Project,Project_Question,Test_Answer
+from models import Student,Teacher,Course,Sign,Answer,Group,stud_course_entry,MyUser,Test,Project,Project_Question
+from models import Test_Answer,Student_Test_Answer,Groupinfo_Question,Groupinfo_Partner,Group_Outcome
 import json
 from django.views.decorators.csrf import csrf_exempt
 import simplejson
@@ -287,8 +288,8 @@ def student_all_course(request):
 #		print 'sessionid is : ',request.session._session_key
 		clist =  Course.objects.all()
 		cname = [c.name for c in clist]
-		for s in cname:
-			print s.encode('gb2312')
+#		for s in cname:
+#			print s.encode('gb2312')
 		response =  HttpResponse(json.dumps({'all_course_list':cname}))
 		response.set_cookie('username','hello me')
 		return response
@@ -296,17 +297,12 @@ def student_all_course(request):
 @csrf_exempt
 def student_my_course(request):
 	if request.method == 'POST':
-		print 'herer in'
 		user = request.user
 	        	
-	#	if request.user :
-		#	print 'user name is : ',request.user.username
 		uid = user.id
-#		print 'userid is: ',uid
 			
 		entry = stud_course_entry.objects.filter(student = uid)
 		if len(entry):
-			print 'here in entry'
 			cids = [e.course for e in entry]
 		#	for s in cids:
 		#		print 'cid is: ',s
@@ -327,7 +323,6 @@ def student_join_course(request):
 		if len(cour)==1:
 			cid = cour[0].id
 		#	print 'cid is : ',cid
-		print 'reacherd here'
 		user = request.user
 		uid = user.id
 		sc = stud_course_entry.objects.filter(course = cid,student= uid)
@@ -358,6 +353,138 @@ def student_course_test(request):
 	else:
 		 return HttpResponse('wrong method')
 
+@csrf_exempt
+def student_course_project(request):
+	if request.method == 'POST':
+		cname = request.POST.get('coursename','')
+		if cname :
+
+			c = get_course_by_name(cname)
+			if c:
+				cid = c.id
+				plist = get_project_by_course(cid)
+				sce = stud_course_entry.objects.filter(course=c.id).order_by('student')
+				sid = [t.student for t in sce]
+				stdlist=MyUser.objects.filter(id__in=sid)
+				studentlist = [t.username for t in stdlist]
+				if plist:
+					projectlist = [p.name for p in plist]
+					return HttpResponse(json.dumps({'result':1,'message':'get project list success','projectlist':projectlist,'studentlist':studentlist}))
+	return HttpResponse('error')
+
+
+#--------get all the questions of the project by coursename and project name
+@csrf_exempt
+def student_project_question(request):
+	if request.method == 'POST':
+		cname = request.POST.get('coursename')
+		pname = request.POST.get('projectname')
+		print 'cname: ',cname,' , ',pname
+		if cname and pname :
+			c = get_course_by_name(cname)
+			if c:
+				print 'course is: ',c.id
+				p = Project.objects.filter(name=pname,course=c.id)
+				project = get_project_by_name(pname,c.id)
+				if project:
+					print 'project id is: ',project.id
+				#if len(p):
+				#	project = p[0]
+					qlist = get_question_by_project(project.id)
+					#qlist = Project_Question.objects.filter(pid=project.id)
+					if len(qlist):
+						print 'qlist is not none'
+						pq = [[t.name,t.max_group,t.number_per_group] for t in qlist]
+						print 'pq length: ',len(pq)
+						return HttpResponse(json.dumps({'result':1,'message':'get project question success','questionlist':pq}))
+	return HttpResponse('error')
+
+
+
+@csrf_exempt
+def student_test_answer(request):
+	if request.method == 'POST':
+		cname = request.POST.get('coursename','')
+		tname = request.POST.get('testname','')
+		user=request.user
+		print 'user is : ',user.id
+		if cname and tname :
+			course = get_course_by_name(cname)
+			if course:
+				print 'course is: ',course.name
+				test = get_test_by_name(tname,course.id)
+				if test:
+					print 'test is: ',test.id
+					#check if the answer has been added
+					ta = Student_Test_Answer.objects.filter(tid=test.id,sid=user.id)
+					if len(ta):
+						return HttpResponse(json.dumps({'result':1,'message':'answers has been added'}))
+					print 'tid is:' ,test.id
+					rightanswer = Test_Answer.objects.filter(tid=test.id).order_by('aid')
+					if len(rightanswer)==0:
+						print 'no right answer'
+						return HttpResponse(json.dumps({'result':0,'message':'answers has been added'}))
+					test_answer = [a.answer for a in rightanswer]
+					print 'len of test_answer is: ',len(test_answer)
+					i=0
+					for i in range(0,len(test_answer)):
+						outcome = 0
+						key = "".join(["answer",str(i+1)])
+						print 'key is: ',key
+						aw = request.POST.get(key,'')
+						print 'answeri is ',aw
+						if aw==test_answer[i]:
+							outcome = 1
+						print 'userid is: ',user.id
+						sid = user.id
+						tid=test.id
+						aid = i+1
+						sta = Student_Test_Answer(tid = tid,sid=sid,aid=aid,answer=aw)
+						sta.save()
+					return HttpResponse(json.dumps({'result':1,'message':'save answer success'}))
+				else:
+					return HttpResponse(json.dumps({'result':0,'message':'test is none'}))
+		else :
+			return HttpResponse(json.dumps({'result':0,'message':'cname,tname, answer or user is none'}))
+					
+
+@csrf_exempt 
+def student_project_groupinfo(request):
+	if request.method == 'POST':
+		req = json.loads(request.body)
+		cname = req['coursename']
+		pname = req['projectname']
+		memberlist = req['memberlist']
+		questionlist = req['questionlist']
+		if cname and tname and memberlist and questionlist :
+			course = get_course_by_name(cname)
+			if course:
+				cid = course.id
+				project = get_project_by_name(pname,cid)
+				if project :
+					pid = project.id
+					sid = request.user.id
+					tmp = Groupinfo_Question.objects.filter(pid=pid,sid=sid)
+					if len(tmp):
+						return HttpResponse(json.dumps({'result':0,'message':'groupinfo already exist'}))
+					for i in range(len(questionlist)):
+						question = get_question_by_name(questionlist[i],pid)
+						gq = Groupinfo_Question(pid=pid,sid=sid,qid=question.id,qname=question.name,priority=i+1)
+						gq.save()
+					for i in range(len(memberlist)):
+						partner = MyUser.objects.get(username=memberlist[i])
+						gpartner= Groupinfo_Partner(pid=pid,sid=sid,partner=partner.id)
+						gpartner.save()
+					return HttpResponse(json.dumps({'result':1,'message':'add groupinfo success'}))
+				return HttpResponse({'result':0,'message':'project not exist'})
+			return HttpResponse({'result':0,'message':'course not exist'})
+		return HttpResponse({'result':0,'message':'parameter are none'})
+	return HttpResponse({'result':0,'message':'request method is wrong'})
+		
+#-----------------
+#
+#teacher api part
+#
 @csrf_exempt
 def teacher_register(request):
     username=None
@@ -664,6 +791,13 @@ def delete_project(request):
 		remove_project_by_id(pid)
 		cname = request.session['course']
 		return HttpResponseRedirect(reverse('teacher_course',args=(cname,)))
+
+####------------------remove api ---------------
+##
+##
+##
+#####-----------------------------------------
+
 def remove_course_by_id(cid):
 	if cid:
 		course = Course.objects.filter(id=cid)
@@ -751,7 +885,7 @@ def test_upload_file(request):
 		uf = UpForm(request.POST,request.FILES)
 		if uf.is_valid():
 			testfile = uf.cleaned_data['testfile']
-			test = get_test_by_name(request.session['testname'])
+			test = get_test_by_name(request.session['testname'],reqeust.session['courseid'])
 			if test:
 				test.files = testfile
 				tid = test.id
@@ -770,9 +904,16 @@ def test_upload_file(request):
 
 class UpForm(forms.Form):
 	testfile = forms.FileField()
-def get_test_by_name(testname):
-	if testname:
-		test = Test.objects.filter(name=testname)
+#-----------------access database api ---
+#
+##
+#
+#
+#---------------------------------------------
+def get_test_by_name(testname,cid):
+	if testname and cid:
+		
+		test = Test.objects.filter(name=testname,course=cid)
 		if len(test):
 			return test[0]
 	return None
@@ -791,6 +932,13 @@ def get_project_by_id(pid):
 		if len(p):
 			return p[0]
 	return None
+def get_project_by_name(pname,cid):
+	if pname and cid:
+		project = Project.objects.filter(name=pname,course=cid)
+		if len(project):
+			return project[0]
+	return None
+	
 
 def get_course_by_id(cid):
 	if cid:
@@ -799,11 +947,38 @@ def get_course_by_id(cid):
 			return course
 		else:
 			return None
-##------upload files api-------
-def upload_files(request,mod):
-	if request.method == 'POST':
-		upload_file = reqeust.FILES['file']
-		upload = mod(files = upload_file)
-		return upload
+
+def get_course_by_name(cname):
+	if cname:
+		c = Course.objects.filter(name = cname)
+		if len(c):
+			return c[0]
+		return None
 	return None
-	
+
+def get_project_by_course(cid):
+	if cid:
+		c = Course.objects.filter(id = cid)
+		if len(c):
+			plist = Project.objects.filter(course = cid)
+			if len(plist):
+				return plist
+			return None
+		return None
+	return None
+
+def get_question_by_project(pid):
+	if pid:
+		pq = Project_Question.objects.filter(pid = pid)
+		if len(pq):
+			return pq
+		return None
+	return None
+def get_question_by_name(qname,pid):
+	if qname and pid:
+		question = Project_Question.objects.filter(name=qname,pid=pid)
+		if len(question):
+			return question[0]
+		return None
+	return None
+#----------------------EOF
