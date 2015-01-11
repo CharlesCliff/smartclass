@@ -70,7 +70,8 @@ DATABASES = {
     }
 }
 TEMPLATE_DIRS = (
-   '/home/chy/webapp/smartClass/templates',
+   os.path.join(BASE_DIR,'/smartClass/templates'),
+#   '/home/chy/work/git/smartclass/webapp/smartClass/templates',
 )
 AUTH_USER_MODEL='smartClass.MyUser'
 DEBUG_TOOLBAR_PANELS = (

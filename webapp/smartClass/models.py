@@ -27,7 +27,8 @@ class Course(models.Model):
     name = models.CharField(max_length=30,unique=True)
     teacher = models.IntegerField()
     number_student = models.IntegerField(default=0)
-    number_works = models.IntegerField(default=0)
+    number_project = models.IntegerField(default=0)
+    number_test = models.IntegerField(default=0)
     status = models.IntegerField(default=-1)
     def __unicode__(self):
         return self.course_name
@@ -71,6 +72,7 @@ class Test(models.Model):
     status = models.IntegerField(default=-1)
     files = models.FileField(upload_to='static/files/test/')
     file_url = models.CharField(max_length=30)
+    number_student = models.IntegerField(default=0)
     def __unicode__(self):
 	return self.name
 
@@ -83,8 +85,10 @@ class Project(models.Model):
     status = models.IntegerField(default=-1)
     files = models.FileField(upload_to='static/files/project')
     file_url = models.CharField(max_length=30)
+    number_student = models.IntegerField(default=0)
     def __unicode__(self):
 	return self.name
+
 class Project_Question(models.Model):
 	qid = models.IntegerField(default=-1)
 	pid = models.IntegerField(default=-1)
@@ -93,8 +97,12 @@ class Project_Question(models.Model):
 	number_per_group=models.IntegerField(default=-1)
 	files = models.FileField(upload_to = 'static/files/project')
 	file_url = models.CharField(max_length=30)
+	first_number = models.IntegerField(default=0)
+	second_number = models.IntegerField(default=0)
+	third_number = models.IntegerField(default=0)
 	def __unicode__(self):
 		return self.name  
+
 class Test_Answer(models.Model):
 	tid = models.IntegerField(default = -1)
 	aid = models.IntegerField(default = -1)

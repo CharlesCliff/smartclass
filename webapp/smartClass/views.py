@@ -331,6 +331,8 @@ def student_join_course(request):
 		else :
 			entry = stud_course_entry(course=cid,student=uid)
 			entry.save()
+			cour.number_student+=1
+			cour.save()
 			return HttpResponse(json.dumps({'result':1,'message':'join course success'}))
 	else :
 		return HttpResponse('wrong method')
@@ -441,6 +443,7 @@ def student_test_answer(request):
 						aid = i+1
 						sta = Student_Test_Answer(tid = tid,sid=sid,aid=aid,answer=aw)
 						sta.save()
+					test.number_student+=1
 					return HttpResponse(json.dumps({'result':1,'message':'save answer success'}))
 				else:
 					return HttpResponse(json.dumps({'result':0,'message':'test is none'}))
@@ -471,20 +474,47 @@ def student_project_groupinfo(request):
 						question = get_question_by_name(questionlist[i],pid)
 						gq = Groupinfo_Question(pid=pid,sid=sid,qid=question.id,qname=question.name,priority=i+1)
 						gq.save()
+						if i==0 :
+							question.first_number+=1
+						if i==1 :
+							question.second_number+=1
+						if i==2 :
+							question.third_number+=1
 					for i in range(len(memberlist)):
 						partner = MyUser.objects.get(username=memberlist[i])
 						gpartner= Groupinfo_Partner(pid=pid,sid=sid,partner=partner.id)
 						gpartner.save()
+					project.number_student +=1
+					project.save()
 					return HttpResponse(json.dumps({'result':1,'message':'add groupinfo success'}))
 				return HttpResponse({'result':0,'message':'project not exist'})
 			return HttpResponse({'result':0,'message':'course not exist'})
 		return HttpResponse({'result':0,'message':'parameter are none'})
 	return HttpResponse({'result':0,'message':'request method is wrong'})
+
+
+#---------------group algorith part-----------------------
+
+def check_group_or_not(course,pnumber):
+	if isinstance(course,Course) and pnumber:
+		if course.number_student == pnumber:
+			return True
+		return False
+	return False
+
+def random_group():	
+	return None
+
+def ranked_grouping(course,project):
+	return None
+#-------end of grouping algorith--------
+
 		
-#-----------------
+#--------------------------------------------------------------------------------------------------------------------------------------
 #
 #teacher api part
 #
+#--------------------------------------------------------------------------------------------------------------------------------------
 @csrf_exempt
 def teacher_register(request):
     username=None
@@ -715,6 +745,8 @@ def create_test(request):
 		if c :
 			t = Test(name=testname,course = c.id ,question_number=number)
 			t.save()
+			c.number_test+=1
+			c.save()
 			return HttpResponseRedirect(reverse('teacher_course',args=(c.name,)))
 	else :
 		return HttpResponse('wrong method')
@@ -759,6 +791,8 @@ def create_project(request):
 			else:
 				w = Project(name=name,course=c.id,pid=10)
 				w.save()
+				c.number_project +=1
+				c.save()
 				return HttpResponseRedirect(reverse('teacher_course',args=(c.name,)))
 		else :
 			return HttpResponse('course not exist')
@@ -782,6 +816,10 @@ def delete_test(request):
 		test = get_test_by_id(int(tid))
 		cname = request.session['course']
 		remove_test_by_id(tid)
+		course = get_course_by_name(cname)
+		if course:
+			course.number_test -=1
+			course.save()
 		return HttpResponseRedirect(reverse('teacher_course',args=(cname,)))
 
 @csrf_exempt
@@ -790,6 +828,10 @@ def delete_project(request):
 		pid = request.POST.get('project','')
 		remove_project_by_id(pid)
 		cname = request.session['course']
+		course = get_course_by_id(request.session['courseid'])
+		if course:
+			course.number_project -=1
+			course.save()
 		return HttpResponseRedirect(reverse('teacher_course',args=(cname,)))
 
 ####------------------remove api ---------------
