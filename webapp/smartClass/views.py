@@ -248,12 +248,9 @@ def student_register(request):
 		password = request.POST.get('password','')
 		user = authenticate(username = username,password=password)
 		if user is not None:
-			print 'user is not none'
 			return HttpResponse(json.dumps({'result':0,'message':'user already exists'}))
 		else :
-			print 'user is none'
 			if username and password :
-				print 'username is : ',username
 				user = MyUser.objects.create_user(username = username,password=password,utype='student')
 				user.is_active=True
 				user.save
@@ -266,11 +263,9 @@ def student_login(request):
 	if request.method=='POST':
 		username = request.POST.get('username','')
 		password = request.POST.get('password','')
-		print 'username : ',username ,' password: ',password
 		user = authenticate(username=username,password=password)
 		if user is not None :
 			if user.is_active:
-				print 'user active'
 				user_login(request,user)
 				return HttpResponse(json.dumps({'result':1,'message':'login success'}))
 			else :
@@ -381,23 +376,23 @@ def student_project_question(request):
 	if request.method == 'POST':
 		cname = request.POST.get('coursename')
 		pname = request.POST.get('projectname')
-		print 'cname: ',cname,' , ',pname
+#		print 'cname: ',cname,' , ',pname
 		if cname and pname :
 			c = get_course_by_name(cname)
 			if c:
-				print 'course is: ',c.id
+#				print 'course is: ',c.id
 				p = Project.objects.filter(name=pname,course=c.id)
 				project = get_project_by_name(pname,c.id)
 				if project:
-					print 'project id is: ',project.id
+#					print 'project id is: ',project.id
 				#if len(p):
 				#	project = p[0]
 					qlist = get_question_by_project(project.id)
 					#qlist = Project_Question.objects.filter(pid=project.id)
 					if len(qlist):
-						print 'qlist is not none'
+#						print 'qlist is not none'
 						pq = [[t.name,t.max_group,t.number_per_group] for t in qlist]
-						print 'pq length: ',len(pq)
+#						print 'pq length: ',len(pq)
 						return HttpResponse(json.dumps({'result':1,'message':'get project question success','questionlist':pq}))
 	return HttpResponse('error')
 
@@ -409,35 +404,35 @@ def student_test_answer(request):
 		cname = request.POST.get('coursename','')
 		tname = request.POST.get('testname','')
 		user=request.user
-		print 'user is : ',user.id
+#		print 'user is : ',user.id
 		if cname and tname :
 			course = get_course_by_name(cname)
 			if course:
-				print 'course is: ',course.name
+#				print 'course is: ',course.name
 				test = get_test_by_name(tname,course.id)
 				if test:
-					print 'test is: ',test.id
+#					print 'test is: ',test.id
 					#check if the answer has been added
 					ta = Student_Test_Answer.objects.filter(tid=test.id,sid=user.id)
 					if len(ta):
 						return HttpResponse(json.dumps({'result':1,'message':'answers has been added'}))
-					print 'tid is:' ,test.id
+#					print 'tid is:' ,test.id
 					rightanswer = Test_Answer.objects.filter(tid=test.id).order_by('aid')
 					if len(rightanswer)==0:
-						print 'no right answer'
+#						print 'no right answer'
 						return HttpResponse(json.dumps({'result':0,'message':'answers has been added'}))
 					test_answer = [a.answer for a in rightanswer]
-					print 'len of test_answer is: ',len(test_answer)
+#					print 'len of test_answer is: ',len(test_answer)
 					i=0
 					for i in range(0,len(test_answer)):
 						outcome = 0
 						key = "".join(["answer",str(i+1)])
-						print 'key is: ',key
+#						print 'key is: ',key
 						aw = request.POST.get(key,'')
-						print 'answeri is ',aw
+#						print 'answeri is ',aw
 						if aw==test_answer[i]:
 							outcome = 1
-						print 'userid is: ',user.id
+#						print 'userid is: ',user.id
 						sid = user.id
 						tid=test.id
 						aid = i+1
@@ -450,16 +445,16 @@ def student_test_answer(request):
 		else :
 			return HttpResponse(json.dumps({'result':0,'message':'cname,tname, answer or user is none'}))
 					
-
+import chardet
 @csrf_exempt 
 def student_project_groupinfo(request):
 	if request.method == 'POST':
-		req = json.loads(request.body)
+		req = json.loads(request.body,encoding='utf8')
 		cname = req['coursename']
 		pname = req['projectname']
 		memberlist = req['memberlist']
 		questionlist = req['questionlist']
-		if cname and tname and memberlist and questionlist :
+		if cname and pname and len(memberlist) and len(questionlist) :
 			course = get_course_by_name(cname)
 			if course:
 				cid = course.id
@@ -487,10 +482,10 @@ def student_project_groupinfo(request):
 					project.number_student +=1
 					project.save()
 					return HttpResponse(json.dumps({'result':1,'message':'add groupinfo success'}))
-				return HttpResponse({'result':0,'message':'project not exist'})
-			return HttpResponse({'result':0,'message':'course not exist'})
-		return HttpResponse({'result':0,'message':'parameter are none'})
-	return HttpResponse({'result':0,'message':'request method is wrong'})
+				return HttpResponse(json.dumps({'result':0,'message':'project not exist'}))
+			return HttpResponse(json.dumps({'result':0,'message':'course not exist'}))
+		return HttpResponse(json.dumps({'result':0,'message':'parameter are none'}))
+	return HttpResponse(json.dumps({'result':0,'message':'request method is wrong'}))
 
 
 #---------------group algorith part-----------------------
