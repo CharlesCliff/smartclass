@@ -922,7 +922,7 @@ def test_upload_file(request):
 		uf = UpForm(request.POST,request.FILES)
 		if uf.is_valid():
 			testfile = uf.cleaned_data['testfile']
-			test = get_test_by_name(request.session['testname'],reqeust.session['courseid'])
+			test = get_test_by_name(request.session['testname'],request.session['courseid'])
 			if test:
 				test.files = testfile
 				tid = test.id
