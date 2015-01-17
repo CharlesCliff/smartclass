@@ -107,6 +107,12 @@ class Test_Answer(models.Model):
 	tid = models.IntegerField(default = -1)
 	aid = models.IntegerField(default = -1)
 	answer = models.CharField(max_length=20)
+	accuracy = models.DecimalField(max_digits=5,decimal_places=2,default = 0)
+
+class Student_Test(models.Model):
+	tid = models.IntegerField(default=-1)
+	sid = models.IntegerField(default=-1)
+	accuracy = models.DecimalField(max_digits=5, decimal_places=2,default=0)
 
 class Student_Test_Answer(models.Model):
 	tid = models.IntegerField(default=-1)
@@ -130,7 +136,7 @@ class Groupinfo_Partner(models.Model):
 class Group_Outcome(models.Model):
 	pid = models.IntegerField(default=0)
 	gid = models.IntegerField(default=0)
-	pid = models.IntegerField(default=0)
-	pname = models.CharField(max_length=30)
+	qid = models.IntegerField(default=0)
+	qname = models.CharField(max_length=30)
 	sid = models.IntegerField(default=0)
 	

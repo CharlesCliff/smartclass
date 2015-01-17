@@ -13,7 +13,32 @@
 		</div>
 	</div>
 	<div class="col-lg-offset-3 col-lg-8">
-		<button class="btn btn-primary" data-toggle="modal" data-target="#addAnswerModal">添加答案</button>	
+		<div class="col-lg-3">
+		<button class="btn btn-primary" data-toggle="modal" data-target="#addAnswerModal">添加答案</button>
+		</div>
+		
+		{%if beginstatus %}
+		<div class="col-lg-3">
+			
+			<form method="POST" action="{%url 'course_begin_test' %}">
+				<input class="btn btn-primary" type="submit" value="开始测试"/>
+			</form>
+		</div>
+		{%endif%}	
+		{%if endstatus%}
+		<div class="col-lg-3">
+			<form method="POST" action="{%url 'course_end_test' %}">
+				<input class="btn btn-primary" type="submit" value="结束测试"/>
+			</form>
+		</div>
+		{%endif%}
+		{%if rollbackstatus%}
+		<div class="col-lg-3">
+			<form method="POST" action="{%url 'course_rollback_test' %}">
+				<input class="btn btn-primary" type="submit" value="重新测试"/>
+			</form>
+		</div>
+		{%endif%}
 	</div>
 	<br/><br/>
 	<div class="container">
@@ -35,16 +60,11 @@
 							<tr>
 								<td>{{ta.aid}}</td>
 								<td>{{ta.answer}}</td>
-								<td></td><td></td>
+								<td>{{test.number_student}}</td>
+								<td>{{ta.accuracy}}</td>
 							</tr>
 						{%endfor%}
 					{%endif%}
-					<tr>
-						<td>1</td>
-						<td>A</td>
-						<td>15</td>
-						<td>45%</td>
-					</tr>	
 				</tbody>
 			</table>
 		</div>
@@ -98,11 +118,15 @@
 							</form>	
 						</div><!--end of modal body-->
 						<div class="modal-footer">
-							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>	
+							<button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>	
 						</div><!--end of footer-->
 					</div><!--end of content-->
 				</div><!--end of dialog-->	
 			</div><!---end of modal-->
 
-	
+	<script type="text/javascript">
+		function begintest(){
+			
+		}
+	</script>
 {%endblock%}

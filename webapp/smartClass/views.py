@@ -3,7 +3,7 @@ from django.shortcuts import render,render_to_response,get_object_or_404
 from django.http import HttpResponse,HttpResponseRedirect
 from django.template import RequestContext
 from models import Student,Teacher,Course,Sign,Answer,Group,stud_course_entry,MyUser,Test,Project,Project_Question
-from models import Test_Answer,Student_Test_Answer,Groupinfo_Question,Groupinfo_Partner,Group_Outcome
+from models import Test_Answer,Student_Test_Answer,Groupinfo_Question,Groupinfo_Partner,Group_Outcome,Student_Test
 import json
 from django.views.decorators.csrf import csrf_exempt
 import simplejson
@@ -288,7 +288,8 @@ def student_all_course(request):
 		response =  HttpResponse(json.dumps({'all_course_list':cname}))
 		response.set_cookie('username','hello me')
 		return response
-#----------get student course:
+
+#----------get student course-----------------------
 @csrf_exempt
 def student_my_course(request):
 	if request.method == 'POST':
@@ -320,14 +321,15 @@ def student_join_course(request):
 		#	print 'cid is : ',cid
 		user = request.user
 		uid = user.id
+		course = cour[0]
 		sc = stud_course_entry.objects.filter(course = cid,student= uid)
 		if len(sc):
 			return HttpResponse(json.dumps({'result':0,'message':'already joined'}))
 		else :
 			entry = stud_course_entry(course=cid,student=uid)
 			entry.save()
-			cour.number_student+=1
-			cour.save()
+			course.number_student+=1
+			course.save()
 			return HttpResponse(json.dumps({'result':1,'message':'join course success'}))
 	else :
 		return HttpResponse('wrong method')
@@ -436,9 +438,12 @@ def student_test_answer(request):
 						sid = user.id
 						tid=test.id
 						aid = i+1
-						sta = Student_Test_Answer(tid = tid,sid=sid,aid=aid,answer=aw)
+						sta = Student_Test_Answer(tid = tid,sid=sid,aid=aid,answer=aw,outcome=outcome)
 						sta.save()
 					test.number_student+=1
+					test.save()
+					st = Student_Test(tid = test.id,sid = user.id,accuracy = 0)
+					st.save()
 					return HttpResponse(json.dumps({'result':1,'message':'save answer success'}))
 				else:
 					return HttpResponse(json.dumps({'result':0,'message':'test is none'}))
@@ -465,6 +470,7 @@ def student_project_groupinfo(request):
 					tmp = Groupinfo_Question.objects.filter(pid=pid,sid=sid)
 					if len(tmp):
 						return HttpResponse(json.dumps({'result':0,'message':'groupinfo already exist'}))
+					i = 0
 					for i in range(len(questionlist)):
 						question = get_question_by_name(questionlist[i],pid)
 						gq = Groupinfo_Question(pid=pid,sid=sid,qid=question.id,qname=question.name,priority=i+1)
@@ -475,12 +481,17 @@ def student_project_groupinfo(request):
 							question.second_number+=1
 						if i==2 :
 							question.third_number+=1
+						print ' i is: ',i
+						question.save()
+					i = 0
 					for i in range(len(memberlist)):
 						partner = MyUser.objects.get(username=memberlist[i])
 						gpartner= Groupinfo_Partner(pid=pid,sid=sid,partner=partner.id)
 						gpartner.save()
 					project.number_student +=1
 					project.save()
+				#	if check_group_or_not(course,project.number_student):
+				#		ranked_grouping(course,project)
 					return HttpResponse(json.dumps({'result':1,'message':'add groupinfo success'}))
 				return HttpResponse(json.dumps({'result':0,'message':'project not exist'}))
 			return HttpResponse(json.dumps({'result':0,'message':'course not exist'}))
@@ -489,7 +500,7 @@ def student_project_groupinfo(request):
 
 
 #---------------group algorith part-----------------------
-
+import random
 def check_group_or_not(course,pnumber):
 	if isinstance(course,Course) and pnumber:
 		if course.number_student == pnumber:
@@ -497,14 +508,175 @@ def check_group_or_not(course,pnumber):
 		return False
 	return False
 
-def random_group():	
+def random_group(slist,question,pid):
+	max_group = question.max_group
+	group_size = question.number_per_group
+	qid = question.id
+	qname = question.name
+	if slist and max_group and group_size:
+		i = 0
+		while(slist and max_group>0):
+			i+=1
+			gid = i
+			snumber = len(slist)
+			for j in range(group_size):
+				rand = random.randint(0,snumber-1)
+				student = slist[rand]
+				gout = Group_Outcome(gid = gid,sid = student.id,pid = pid,qid = qid,qname = qname)
+				gout.save()
+				snumber-=1
+				slist.remove(student)
+			max_group-=1
+		return True	
+	return False
+
+#------random kick out
+def random_chose(studentlist,kick_number,pid):
+	if studentlsit and kick_number :
+		number = len(studentlist)
+		for i in range(kick_number):
+			kick = random.randint(0,number-1)
+			if change_student_status(studentlist[kick],pid):
+				studentlist.remove(kick)
+				number-=1
+			else:	
+				return None
+		return studentlist
 	return None
+
+def change_student_status(student,pid):
+	if isinstance(student,MyUser) and student.utype=='student':
+		sid = student.id
+		sq0 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=0)
+		sq1 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=1)
+		sq2 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=2)
+		sq3 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=3)
+		if sq0:
+			return True
+		elif sq2 is None and sq3 is None:
+			sq0 = Groupinfo_Question(pid = pid,sid = sid,priority=0)
+			sq0.save()
+			sq1.delete()
+			return True
+		elif sq1 and sq2 :
+			sq2.priority = 1
+			qid = sq2.qid
+			q = Project_Question.objects.get(id = qid)
+			q.first_number+=1
+			q.save()
+			sq1.delete()
+			return True
+		elif sq1 and sq3:
+			sq3.priority = 1
+			qid = sq3.qid
+			q = Project_Question.objects.get(id=qid)
+			q.first_number+=1
+			q.save()
+			sq1.delete()
+			return True
+		return False
+	return False
 
 def ranked_grouping(course,project):
+	if isinstance(course,Course) and isinstance(project,Project):
+		number_student = project.number_student
+		qlist = get_question_by_project(project.id)
+		#---get every question's first_choice student list---
+		while(qlist and number_student):
+			top_question = get_top_question(qlist)
+			student_list = get_student_list_by_question(top_question.id)
+			#begin of top_question group
+			if top_question and number_student and student_list:
+				max_number = top_question.max_group*top_question.number_per_group
+				join_number = top_question.first_number
+				if len(student_list) == top_question.first_number:
+					join_number = top_question.first_number
+				else :
+					join_number = len(student_list)
+				if join_number <= max_number :
+					random_group(student_list,top_question,project.id)
+					number_student -= join_number
+				else :
+					kick_number = join_number - max_number
+					slist = random_chose(student_list,kick_number,project.id)
+					if slist is not None:
+						random_group(slist,top_question,project.id)
+						number_student-=max_number
+					else :
+						return None
+				clear_question(top_question,project.id)
+				qlist.remove(top_question)
+			else:
+				return None	
+		return None
 	return None
-#-------end of grouping algorith--------
 
-		
+def get_student_list_by_question(qid):
+	if qid:
+		slist = Groupinfo_Question.objects.filter(qid=qid,priority__in=[0,1])
+		if len(slist):
+			ulist = MyUser.objects.filter(id__in=slist)
+			return ulist
+		return None
+	return None
+
+def get_top_question(qlist):
+	if len(qlist):
+		max_tmp = -1
+		tmp = None
+		for q in qlist:
+			if isinstance(q,Project_Question):
+				if q.first_number > max_tmp:
+					max_tmp = q.first_number
+					tmp = q
+		return tmp
+	return None
+#-------end of grouping algorith-----------------------------
+#-------------------------------------------Test statistics-------------
+# statistic of test
+#
+#----------------------------------		
+def test_statistic(course,test):
+	if isinstance(course,Course) and isinstance(test,Test) and course and test:
+		print 'begin statistic '
+		tid = test.id
+		testanswer = Test_Answer.objects.filter(tid__exact=tid)
+		if len(testanswer):
+			for t in testanswer:
+				aid = t.aid
+				sta = Student_Test_Answer.objects.filter(aid=aid ,tid=tid)
+				accuracy = 0
+				if len(sta):
+					for st in sta :
+						accuracy+=st.outcome
+				studnumber = test.number_student
+				outcome = (float(accuracy)/float(studnumber))*100
+				t.accuracy = outcome
+				t.save()
+			print 'end statistic'
+			return True
+		return False
+
+def student_test_statistic(course,test,user):
+	if isinstance(course,Course) and isinstance(test,Test)and isinstance(user,MyUser)  and course and test and user:
+		print 'begin student statistic'
+		tid = test.id
+		st = Student_Test.objects.filter(tid=tid)
+		print 'len of st: ',len(st)
+		for s in st:
+			
+			sta = Student_Test_Answer.objects.filter(sid = s.sid ,tid=tid)
+			accuracy = 0
+			if len(sta):
+				for t in sta :
+					accuracy +=t.outcome
+				qnumber = test.question_number
+				outcome = (float(accuracy)/float(qnumber))*100
+				s.accuracy = outcome
+				s.save()
+				print 'end student statistic'
+		return False
+	return False
 #--------------------------------------------------------------------------------------------------------------------------------------
 #
 #teacher api part
@@ -686,10 +858,22 @@ def course_project(request,project_name):
 	request.session['project']=p.id
 	request.session['project_name']=p.name
 	questions = Project_Question.objects.filter(pid=p.id)
+	beginstatus=None
+	endstatus=None
+	rollbackstatus=0
+	if p.status==1:
+		beginstatus=1
+	elif p.status==2:
+		endstatus=1
+	elif p.status==3:
+		rollbackstatus=1
 	c = RequestContext(request,
 		{'title':'Project',
 		 'project':p,
-		 'questions':questions
+		 'questions':questions,
+		 'beginstatus':beginstatus,
+		 'endstatus':endstatus,
+		 'rollbackstatus':rollbackstatus
 		})
 	return render_to_response('project.html',c)
 
@@ -709,25 +893,129 @@ def project_add_question(request):
 		else :
 			q = Project_Question(name=qname,qid=qid,pid=pid,number_per_group=number_per_group,max_group=max_group)
 			q.save()
+			project = get_project_by_id(pid)
+			project.status = 1
+			project.save()
 			return HttpResponseRedirect(reverse('course_project',args=(pname,)))
 			
+@csrf_exempt
+def course_begin_group(request):
+	if request.method == 'POST':
+		pid = request.session['project']
+		project = get_project_by_id(pid)
+		pname= request.session['project_name']
+		if project:
+			project.status = 2
+			project.save()
+			return HttpResponseRedirect(reverse('course_project',args=(pname,)))
+		return HttpResponse('project none')
+	return HttpResponse('method is wrong')
+
+@csrf_exempt
+def course_end_group(request):
+	if request.method == 'POST':
+		pid = request.session['project']
+		cname=request.session['course']
+		pname= request.session['project_name']
+		course = get_course_by_name(cname)
+		project = get_project_by_id(pid)
+		if project:
+			course = get_course_by_id(project.course)
+			print 'status change: ',project.status
+			project.status = 3
+			project.save()
+			ranked_grouping(course,project)
+			print 'before return'
+			return HttpResponseRedirect(reverse('course_project',args=(pname,)))
+		return HttpResponse('project none')
+	return HttpResponse('method is wrong')
+
+
+def project_statistic(project,course):
+	if isinstance(project,Project) and isinstance(course,Course):
+		question = Project_Question.objects.filter(pid=project.id)
+		for q in question:
+			qid = q.id
+			firstnumber = 0
+			secondnumber=0
+			thirdnumber = 0
+			sq1 = Groupinfo_Question.objects.filter(qid = qid ,priority = 1)
+			sq2 = Groupinfo_Question.objects.filter(qid = qid ,priority = 2)
+			sq3 = Groupinfo_Question.objects.filter(qid = qid ,priority = 3)
+			firstnumber = len(sq1)
+			secondnumber = len(sq2)
+			thirdnumber = len(sq3)
+			if firstnumber == q.first_number:
+				print 'first number is equal'
+			else :
+				print 'first not equal'
+				q.first_number = firstnumber
+			if secondnumber == q.second_number:
+				print 'second number is equal'
+			else:
+				print 'second not equal'
+				q.second_number = secondnumber
+			if thirdnumber == q.third_number:
+				print 'third number is equal'
+			else:
+				print 'third number is not equal'
+				q.third_number = thirdnumber
+			q.save()
+		return True
+	return False
+
+
+
+@csrf_exempt
+def course_rollback_group(request):
+	if request.method == 'POST':
+		pid = request.session['project']
+		project = get_project_by_id(pid)
+		pname= request.session['project_name']
+		if project:
+			project.status = 1
+			project.save()
+			return HttpResponseRedirect(reverse('course_project',args=(pname,)))
+		return HttpResponse('project none')
+	return HttpResponse('method is wrong')
 		
-#--------course/test
+		
+#--------course/test---------------------------
 @csrf_exempt
 def course_test(request,test_name):
 	tname = test_name
-	print 'testname is : ',tname.encode('gb2312')
+	#print 'testname is : ',tname.encode('gb2312')
 	cid = request.session['courseid']
 	t = Test.objects.get(name=tname,course=cid)
 	answer_range=range(1,t.question_number+1)
 	test_answer = Test_Answer.objects.filter(tid=t.id).order_by('aid')
 	#print 'testanswer is: ',len(test_answer)
-	c = RequestContext(request,{'title':'Test','test':t,'answer_range':answer_range,'test_answer':test_answer})
+	beginstatus =None
+	endstatus = None
+	rollbackstatus = 0
+	if t.status==2:
+		beginstatus = 1
+	elif t.status==3:
+		endstatus = 1
+	elif t.status == 4 :
+		rollbackstatus = 1 
+	c = RequestContext(request,{'title':'Test','test':t,'answer_range':answer_range,'test_answer':test_answer,'beginstatus':beginstatus,'endstatus':endstatus,'rollbackstatus':rollbackstatus})
 	request.session['test']=t.id
 	request.session['testname']=tname
 	return render_to_response('testing.html',c)
 
-
+@csrf_exempt
+def course_rollback_test(request):
+	if request.method == 'POST':
+		tname = request.session['testname']
+		cid = request.session['courseid']
+		test = get_test_by_name(tname,cid)
+		if test:
+			test.status = 2
+			test.save()
+			return HttpResponseRedirect(reverse('course_test',args=(tname,)))
+		return HttpResponse('test is none')
+	return HttpResponse('method is wrong')
 
 @csrf_exempt
 def create_test(request):
@@ -745,6 +1033,36 @@ def create_test(request):
 			return HttpResponseRedirect(reverse('teacher_course',args=(c.name,)))
 	else :
 		return HttpResponse('wrong method')
+
+@csrf_exempt
+def course_begin_test(request):
+	if request.method == 'POST':
+		testname = request.session['testname']
+		tid = request.session['test']
+		test = get_test_by_id(tid)
+		if test:
+			test.status=3
+			test.save()
+			return HttpResponseRedirect(reverse('course_test',args=(testname,)))
+		return HttpResponse('test is none')
+	return HttpResponse('method is wrong')
+
+@csrf_exempt
+def course_end_test(request):
+	if request.method == 'POST':
+		testname = request.session['testname']
+		tid = request.session['test']
+		test = get_test_by_id(tid)
+		course = get_course_by_id(request.session['courseid'])
+		if test:
+			test.status=4
+			test.save()
+			test_statistic(course,test)
+			student_test_statistic(course,test,request.user)
+			return HttpResponseRedirect(reverse('course_test',args=(testname,)))
+		return HttpResponse('test is none')
+	return HttpResponse('method is wrong')
+
 
 #----------add answers-----
 @csrf_exempt
@@ -767,6 +1085,7 @@ def test_add_answer(request):
 			else :
 				temp = Test_Answer(tid = tid,aid=aid,answer=answer)
 				temp.save()
+		test.status = 1
 		return HttpResponseRedirect(reverse('course_test',args=(tname,)))
 
 
@@ -784,7 +1103,7 @@ def create_project(request):
 			if len(w):
 				return HttpResponse('project already exists')
 			else:
-				w = Project(name=name,course=c.id,pid=10)
+				w = Project(name=name,course=c.id,pid=10,status = 0)
 				w.save()
 				c.number_project +=1
 				c.save()
@@ -930,6 +1249,7 @@ def test_upload_file(request):
 				test.files.name =str(tid)+'_'+ test.files.name
 #				print 'url is: ',test.files.url,' ',test.files.name,' ',test.files.path,' ',test.files
 				test.file_url='files/test/'+str(tid)+'/'+test.files.name
+				test.status = 2
 				test.save()
 				return HttpResponseRedirect(reverse('course_test',args=(test.name,)))
 			else:
