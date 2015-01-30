@@ -127,6 +127,7 @@ class Groupinfo_Question(models.Model):
 	qid = models.IntegerField(default=0)
 	qname=models.CharField(max_length=30)
 	priority=models.IntegerField(default=-1)
+	priority_bak = models.IntegerField(default=-1)
 	
 class Groupinfo_Partner(models.Model):
 	pid = models.IntegerField(default=0)
@@ -139,4 +140,14 @@ class Group_Outcome(models.Model):
 	qid = models.IntegerField(default=0)
 	qname = models.CharField(max_length=30)
 	sid = models.IntegerField(default=0)
+class Group_Question_Outcome(models.Model):
+	pid = models.IntegerField(default=0)
+	gid = models.IntegerField(default=0)
+	qid = models.IntegerField(default=0)
+	qname = models.CharField(max_length=30)
 	
+class Group_Student_Outcome(models.Model):
+	sid = models.IntegerField(default=0)
+	gid = models.IntegerField(default=0)
+	pid = models.IntegerField(default=0)
+	sname = models.CharField(max_length=30)

@@ -4,6 +4,7 @@ from django.http import HttpResponse,HttpResponseRedirect
 from django.template import RequestContext
 from models import Student,Teacher,Course,Sign,Answer,Group,stud_course_entry,MyUser,Test,Project,Project_Question
 from models import Test_Answer,Student_Test_Answer,Groupinfo_Question,Groupinfo_Partner,Group_Outcome,Student_Test
+from models import Group_Question_Outcome,Group_Student_Outcome
 import json
 from django.views.decorators.csrf import csrf_exempt
 import simplejson
@@ -473,7 +474,7 @@ def student_project_groupinfo(request):
 					i = 0
 					for i in range(len(questionlist)):
 						question = get_question_by_name(questionlist[i],pid)
-						gq = Groupinfo_Question(pid=pid,sid=sid,qid=question.id,qname=question.name,priority=i+1)
+						gq = Groupinfo_Question(pid=pid,sid=sid,qid=question.id,qname=question.name,priority=i+1,priority_bak = i+1)
 						gq.save()
 						if i==0 :
 							question.first_number+=1
@@ -513,36 +514,73 @@ def random_group(slist,question,pid):
 	group_size = question.number_per_group
 	qid = question.id
 	qname = question.name
+	gout = Group_Outcome.objects.filter(pid=pid).order_by('gid')
+	gid = -1
+	if len(gout):
+		for g in gout:
+			if g.gid > gid:
+				gid = g.gid
+
 	if slist and max_group and group_size:
 		i = 0
-		while(slist and max_group>0):
+		totalstudent = len(slist)
+		snumber = totalstudent
+		kick_list = []
+		while snumber > 0 and max_group>0:
 			i+=1
-			gid = i
-			snumber = len(slist)
-			for j in range(group_size):
-				rand = random.randint(0,snumber-1)
+			gid =gid+ 1
+			#snumber = len(slist)
+			j = group_size
+			Group_Question_Outcome(gid = gid,pid = pid,qid = qid,qname = qname).save()
+			while j  > 0 and snumber>0:
+				rand = random.randint(0,totalstudent-1)
+				if rand in kick_list :
+					continue
 				student = slist[rand]
 				gout = Group_Outcome(gid = gid,sid = student.id,pid = pid,qid = qid,qname = qname)
 				gout.save()
+				Group_Student_Outcome(gid=gid,sid = student.id,pid = qid,sname=student.username).save()
+				j -=1
 				snumber-=1
-				slist.remove(student)
+				#slist.remove(rand)	
+				kick_list.append(rand)
+				print 'kick number is :' ,rand
+			print 'gid is ',gid
 			max_group-=1
+		print 'befor chage information,,',len(slist)
+		if len(slist):
+			for s in slist:
+				print 'for student sid is : ',s.id
+				q = Groupinfo_Question.objects.filter(sid=s.id,pid=pid)
+				if len(q) :
+					print len(q), ' is the length of q'
+					for t in q :
+						t.priority = -1
+						print 'information change '
+						t.save()
+
 		return True	
 	return False
 
-#------random kick out
+#------random kick out---------------------------------
 def random_chose(studentlist,kick_number,pid):
 	if studentlsit and kick_number :
 		number = len(studentlist)
-		for i in range(kick_number):
+		kick_list=[]
+		while kick_number>0:
 			kick = random.randint(0,number-1)
+			if kick in kick_list:
+				continue
 			if change_student_status(studentlist[kick],pid):
-				studentlist.remove(kick)
-				number-=1
-			else:	
-				return None
-		return studentlist
-	return None
+				#studentlist.remove(kick)
+				kick_list.append(kick)
+				#number-=1
+				kick_number -=1
+			#else:	
+				#return False
+		#return studentlist
+		return True
+	return False
 
 def change_student_status(student,pid):
 	if isinstance(student,MyUser) and student.utype=='student':
@@ -552,11 +590,13 @@ def change_student_status(student,pid):
 		sq2 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=2)
 		sq3 = Groupinfo_Question.objects.filter(sid= sid,pid=pid,priority=3)
 		if sq0:
-			return True
+			return False
 		elif sq2 is None and sq3 is None:
 			sq0 = Groupinfo_Question(pid = pid,sid = sid,priority=0)
 			sq0.save()
-			sq1.delete()
+			#sq1.delete()
+			sq1.priority=-1
+			sq1.save()
 			return True
 		elif sq1 and sq2 :
 			sq2.priority = 1
@@ -564,7 +604,9 @@ def change_student_status(student,pid):
 			q = Project_Question.objects.get(id = qid)
 			q.first_number+=1
 			q.save()
-			sq1.delete()
+			#sq1.delete()
+			sq1.priority = -1
+			sq1.save()
 			return True
 		elif sq1 and sq3:
 			sq3.priority = 1
@@ -572,7 +614,9 @@ def change_student_status(student,pid):
 			q = Project_Question.objects.get(id=qid)
 			q.first_number+=1
 			q.save()
-			sq1.delete()
+			#sq1.delete()
+			sq1.priority = -1
+			sq1.save()
 			return True
 		return False
 	return False
@@ -582,8 +626,11 @@ def ranked_grouping(course,project):
 		number_student = project.number_student
 		qlist = get_question_by_project(project.id)
 		#---get every question's first_choice student list---
-		while(qlist and number_student):
+		while number_student>0:
+			project_statistic(project,course)
 			top_question = get_top_question(qlist)
+			if top_question is None:
+				break
 			student_list = get_student_list_by_question(top_question.id)
 			#begin of top_question group
 			if top_question and number_student and student_list:
@@ -598,14 +645,18 @@ def ranked_grouping(course,project):
 					number_student -= join_number
 				else :
 					kick_number = join_number - max_number
-					slist = random_chose(student_list,kick_number,project.id)
+					slist = None
+					if  random_chose(student_list,kick_number,project.id):
+						slist = get_student_list_by_question(top_question.id)
 					if slist is not None:
 						random_group(slist,top_question,project.id)
 						number_student-=max_number
 					else :
 						return None
-				clear_question(top_question,project.id)
-				qlist.remove(top_question)
+				#clear_question(top_question,project.id)
+				#qlist.remove(top_question)
+				top_question.first_number = -1
+				top_question.save()
 			else:
 				return None	
 		return None
@@ -614,8 +665,9 @@ def ranked_grouping(course,project):
 def get_student_list_by_question(qid):
 	if qid:
 		slist = Groupinfo_Question.objects.filter(qid=qid,priority__in=[0,1])
+		idlist = [t.sid for t in slist]
 		if len(slist):
-			ulist = MyUser.objects.filter(id__in=slist)
+			ulist = MyUser.objects.filter(id__in=idlist)
 			return ulist
 		return None
 	return None
@@ -631,6 +683,49 @@ def get_top_question(qlist):
 					tmp = q
 		return tmp
 	return None
+
+#def random_group_method(project,course):
+	
+
+
+class question_():
+	pid= None
+	qid = None
+	first_number = None
+	second_number = None
+	third_number = None
+	status = None
+class groupinfo():
+	sid = None
+	pid = None
+	qid = None
+	priority = None
+	status = None
+class student():
+	sid = None
+	status = None
+list_question_ = []
+list_groupinfo = []
+
+def get_statistics(project,course):
+	if project and course :
+		pid = project.id
+		quest = get_question_by_project(pid)
+		
+		for q in quest:
+			tmp = question_(pid=q.pid,qid=q.id,first_number=q.first_number,second_number=q.second_number,third_number=q.third_number)
+			list_question_.append(tmp)
+		gi = Groupinfo_Question.objects.filter(pid=pid)
+		for t in gi:
+			tmp = groupinfo(sid=t.sid,pid=t.pid,qid=t.qid,priority=t.priority)
+			list_groupinfo.append(tmp) 
+		return True
+	return False
+
+def rank_group(project,course):
+	if isinstance(project,Project) and isinstance(course,Course) and project and course :
+		get_statistics(project,course)
+		begin_random_gouping(project,course)
 #-------end of grouping algorith-----------------------------
 #-------------------------------------------Test statistics-------------
 # statistic of test
@@ -851,6 +946,11 @@ def teacher_course(request,course_name):
      #   return HttpResponse('course not exists')    
 
 #-----------course/project
+class goutcomeform():
+	def __init__(self,gid,qname,studentlist):
+		self.gid = gid+1
+		self.qname = qname
+		self.studentlist = studentlist	
 @csrf_exempt
 def course_project(request,project_name):
 	pname = project_name
@@ -858,6 +958,22 @@ def course_project(request,project_name):
 	request.session['project']=p.id
 	request.session['project_name']=p.name
 	questions = Project_Question.objects.filter(pid=p.id)
+	studentlist=[]
+	gout = Group_Outcome.objects.filter(pid=p.id).order_by('gid')
+	gqout = Group_Question_Outcome.objects.filter(pid = p.id).order_by('gid')
+	goutcomelist = []
+	for t in gqout:
+		gstudentlist = Group_Student_Outcome.objects.filter(gid=t.gid,pid=t.qid)
+		gsname = [gs.sname for gs in gstudentlist]
+		print 'gsname list : ',gsname
+	#	gstr = ''
+	#	for sn in gsname:
+	#		tmp = " ".join(sn)
+	#		gstr=gstr.join(tmp)
+	#	print gstr
+		goutcome1 = goutcomeform(t.gid,t.qname,gsname)
+		goutcomelist.append(goutcome1)
+		#studentlist.append(gstr)
 	beginstatus=None
 	endstatus=None
 	rollbackstatus=0
@@ -867,16 +983,29 @@ def course_project(request,project_name):
 		endstatus=1
 	elif p.status==3:
 		rollbackstatus=1
+	print 'group outcome len : ',len(goutcomelist)
 	c = RequestContext(request,
 		{'title':'Project',
 		 'project':p,
 		 'questions':questions,
 		 'beginstatus':beginstatus,
 		 'endstatus':endstatus,
-		 'rollbackstatus':rollbackstatus
+		 'rollbackstatus':rollbackstatus,
+		 'group_outcome':goutcomelist
 		})
 	return render_to_response('project.html',c)
 
+
+def project_student_groupinfo(request):
+	if request.method == 'POST':
+		return HttpResponse('return ')
+	return HttpResponse('method wrong')
+
+def get_student_groupinfo_by_project(project,sid):
+	if project and isinstance(project,Project) and sid :
+		gq  = Groupinfo_Question.objects.filter(pid = project.id,sid = sid)
+		return None
+	return None		
 #--------------------add question----
 @csrf_exempt
 def project_add_question(request):
@@ -924,12 +1053,20 @@ def course_end_group(request):
 			print 'status change: ',project.status
 			project.status = 3
 			project.save()
+			#---统计组队信息
+			project_statistic(project,course)
+			#----进行分组----
+			print 'before group'
 			ranked_grouping(course,project)
-			print 'before return'
+
+			print 'end group'
 			return HttpResponseRedirect(reverse('course_project',args=(pname,)))
 		return HttpResponse('project none')
 	return HttpResponse('method is wrong')
 
+#####----------------------------#########
+###统计已提交的组队信息
+###---------------------------------
 
 def project_statistic(project,course):
 	if isinstance(project,Project) and isinstance(course,Course):

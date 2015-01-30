@@ -102,7 +102,7 @@
 				<hr/>
 				<div class="container" id="group-list">
 					<div class="row">
-						<label>分组:</label>	
+						<label>分组结果:</label>	
 						<button class="btn btn-primary">开始分组</button>
 					</div>
 					<br/><br/>
@@ -110,17 +110,28 @@
 						<table class="table table-bordered" id="group-outcome">
 							<thead>
 								<tr>
-									<td>ID</td>
-									<td>Question Name</td>
-									<td>Student list</td>
+									<th>ID</th>
+									<th>Question Name</th>
+									<th>Student list</th>
 								</tr>	
 							</thead>	
 							<tbody>
+								{%if group_outcome%}
+									{%for gout in group_outcome%}
+										<tr>
+											<td>{{gout.gid}}</td>
+											<td>{{gout.qname}}</td>
+											<td>{%for s in gout.studentlist%}
+												{{s}}, {%endfor%}</td>
+										</tr>
+									{%endfor%}
+								{%endif%}
+								<!--
 								<tr>
 									<td>1</td>
 									<td>zhi hui ke tang</td>
 									<td>chenyang,lizhengtang</td>
-								</tr>
+								</tr>-->
 							</tbody>
 						</table>
 					</div>
