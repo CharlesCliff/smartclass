@@ -1,4 +1,4 @@
-智慧课堂助手服务器搭建配置文档
+﻿智慧课堂助手服务器搭建配置文档
 一、	nginx搭建和配置
 
 nginx安装可安装文档中的附录编译安装，也可以用linux发布版的repository安装，如ubuntu/debian下：
@@ -15,10 +15,10 @@ nginx的启动和停止：
 uwsgi通过apt-get install uwsgi后，用一下方式运行webapp
 	1、cd /path/to/webapp/将目录切换到webapp下
 	2、编辑smartclass.ini，修改其中的chdir 为当前webapp的根目录，如/home/username/webapp
-	3、运行命令：uwsgi –ini smartclass.ini
+	3、运行命令：uwsgi --ini smartclass.ini
        三、nginx启动和uwsgi启动
 	1、启动uwsgi、nginx:
-		uwsgi –ini /path/to/your/webapp/smartclass.ini
+		uwsgi --ini /path/to/your/webapp/smartclass.ini
 		service nginx start
 	2、浏览器输入http://hostaddress:8080/smartClass/teacher/login查看是否正确启动
 
