@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <Button
+        android:id="@+id/nepbutton2"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:text="修改密码" 
+        android:background="#10000000"/>
+
+    <Spinner
+        android:id="@+id/nepspinner1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignRight="@+id/nepspinner2"
+        android:layout_below="@+id/neptextView2" />
+
+    <TextView
+        android:id="@+id/neptextView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/nepbutton2"
+        android:text="设置当前所需使用课程" />
+
+    <TextView
+        android:id="@+id/neptextView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/nepspinner1"
+        android:text="添加一门课程" />
+
+    <Spinner
+        android:id="@+id/nepspinner2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/neptextView3"
+        android:layout_toLeftOf="@+id/nepbutton1" />
+
+    <Button
+        android:id="@+id/nepbutton1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/nepspinner1"
+        android:text="开始使用" 
+        android:background="#10000000"/>
+
+    <Button
+        android:id="@+id/nepbutton4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/nepbutton1"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/nepspinner2"
+        android:text="确认添加" 
+        android:background="#10000000"/>
+
+    <Button
+        android:id="@+id/fuckbutton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/nepspinner3"
+        android:layout_alignLeft="@+id/nepbutton4"
+        android:layout_alignParentRight="true"
+        android:text="确认删除" 
+        android:background="#10000000"/>
+
+    <TextView
+        android:id="@+id/neptextView4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/nepspinner2"
+        android:text="删除一门课程" />
+
+    <TextView
+        android:id="@+id/neptextView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/nepbutton2"
+        android:layout_alignBottom="@+id/nepbutton2"
+        android:layout_centerHorizontal="true"
+        android:text="用户名"
+        android:textSize="20dp" />
+
+    <Spinner
+        android:id="@+id/nepspinner3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignRight="@+id/nepspinner2"
+        android:layout_below="@+id/neptextView4" />
+
+</RelativeLayout>

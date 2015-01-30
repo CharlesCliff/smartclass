@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.classdaemon"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="9"
+        android:targetSdkVersion="19" />
+	<uses-permission android:name="android.permission.INTERNET">
+	    
+	</uses-permission>
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/iconandroid"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name="com.example.classdaemon.MainActivity"
+            android:label="智慧课堂助手">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.AnswerQuestion"
+            android:label="提交测试答案"
+            android:parentActivityName="com.example.classdaemon.TestList">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.AskQuestion"
+            android:label="学而不思则罔">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.Group"
+            android:label="人心齐，泰山移"
+            android:parentActivityName="com.example.classdaemon.OnlineWorkActivity">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.OnlineWorkActivity"
+            android:label="智慧课堂助手"
+            android:parentActivityName="com.example.classdaemon.NewEditProfile">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.RegisterActivity"
+            android:label="智慧课堂助手"
+            android:parentActivityName="com.example.classdaemon.MainActivity">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.EditProfile"
+            android:label="个人中心">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.TestList"
+            android:label="测试列表"
+            android:parentActivityName="com.example.classdaemon.OnlineWorkActivity">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.SelectProject"
+            android:label="选择大作业题目"
+            android:parentActivityName="com.example.classdaemon.SelectTeammate">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.SelectTeammate"
+            android:label="选择队友"
+            android:parentActivityName="com.example.classdaemon.OnlineWorkActivity">
+        </activity>
+        <activity
+            android:name="com.example.classdaemon.NewEditProfile"
+            android:label="课程设置"
+            android:parentActivityName="com.example.classdaemon.MainActivity"></activity>
+    </application>
+
+</manifest>
