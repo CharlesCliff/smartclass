@@ -13,7 +13,7 @@ public class GlobalData {
 	private static String currentCourse;
 	public static String cookie;
 	public static String sessionid;
-	public static String baseUrl = "http://182.92.169.74:8000";
+	public static String baseUrl = "http://162.105.146.179:8000";
 	public static String testName;
 	public static int success = 0x123;
 	public static String test;
